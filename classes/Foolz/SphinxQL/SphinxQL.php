@@ -556,11 +556,13 @@ class SphinxQL
             foreach ($this->match as $match) {
                 $pre .= '@'.$match['column'].' ';
 
-                if ($match['half']) {
-                    $pre .= $this->halfEscapeMatch($match['value']);
-                } else {
+                if ($match['escape'] == self::MATCH_ESCAPE_PART) {
+                    $pre .= $this->partEscapeMatch($match['value']);
+                } else if ($match['escape'] == self::MATCH_ESCAPE_FULL)				{
                     $pre .= $this->escapeMatch($match['value']);
-                }
+                } else {
+				    $pre .= $match['value'];
+				}
 
                 $pre .= ' ';
             }
@@ -914,19 +916,32 @@ class SphinxQL
 
         return $this;
     }
+	
+	/**
+	 * Escape all controll characters
+	 */
+	const MATCH_ESCAPE_FULL = 'full';
+	/**
+	 * Escape all controll characters but " (quote), | (pipe), - (minus)
+	 */
+	const MATCH_ESCAPE_PART = 'part';
+	/**
+	 * Escape nothing
+	 */
+	const MATCH_ESCAPE_NO = 'no';
 
     /**
      * MATCH clause (Sphinx-specific)
      *
      * @param  string   $column  The column name
      * @param  string   $value   The value
-     * @param  boolean  $half    Exclude ", |, - control characters from being escaped
+     * @param  boolean  $escape  Escape mode: self::MATCH_ESCAPE_*
      *
      * @return  \Foolz\SphinxQL\SphinxQL  The current object
      */
-    public function match($column, $value, $half = false)
+    public function match($column, $value, $escape = self::MATCH_ESCAPE_FULL)
     {
-        $this->match[] = array('column' => $column, 'value' => $value, 'half' => $half);
+        $this->match[] = array('column' => $column, 'value' => $value, 'escape' => $escape);
 
         return $this;
     }
@@ -1245,7 +1260,7 @@ class SphinxQL
      *
      * @return  string  The escaped string
      */
-    public function halfEscapeMatch($string)
+    public function partEscapeMatch($string)
     {
         $from_to = array(
             '\\' => '\\\\',
